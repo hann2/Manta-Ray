@@ -3,13 +3,14 @@
   (:require [Manta-Ray.kdtree :as kdtree])
   (:require [clojure.algo.generic.math-functions :as math]))
 
-(defn dprint
-  ([o]
-    (println (str "Debug output: " o ".\n"))
-    o)
-  ([s o]
-    (println (str s ": " o ".\n"))
-    o))
+
+
+(def irradiance-cache (atom {}))
+(def irradiance-vals (atom {}))
+
+
+;threshold for determining geometric equality
+(def threshold 1.0e-2)
 
 (def material-lib {
     :solid-red {
@@ -58,13 +59,6 @@
       :refractive_index 1.0
     }
   })
-
-(def irradiance-cache (atom {}))
-(def irradiance-vals (atom {}))
-
-
-;threshold for determining geometric equality
-(def threshold 1.0e-2)
 
 ;shapes must have evaluate, intersect, and normal functions
 ;may have surface eczema
@@ -265,9 +259,7 @@
         [0.0 0.0 0.0]
         (let [
           scale
-          (/
-              (vector/dot (get surface-from :normal) (get ray :direction))
-              (. Math PI))]
+          1.0]
           (mapv
             (fn [element]
               (*
@@ -310,14 +302,14 @@
             (and
               best-val
               (>
-                0.05
+                0.005
                 (vector/sqr-length
                   (mapv
                     -
                     best-val
                     (get surface :collision)))))
             (get-in @irradiance-vals [(get surface :shape) best-val])
-            (let [color (path-trace geometry surface 8 weight)]
+            (let [color (path-trace geometry surface 3 weight)]
               (swap!
                 irradiance-vals
                 #(assoc-in
@@ -359,19 +351,14 @@
 
 (defn raytrace
   [scene]
-  ;initialize irradiance cache
-  (doall
-    (map
-      (fn [key] (reset! irradiance-cache (assoc @irradiance-cache key nil)))
-      (get scene :geometry)))
-  (pmap
+  (map
     ;function take x and returns seq of seqs representing column
     (fn [x]
-        (pmap
-          ;fn takes y and returns seq representing color triple
-          (fn [y]
-            (get-pixel scene x y))
-          (range (get-in scene [:camera :height]))))
+      (pmap
+        ;fn takes y and returns seq representing color triple
+        (fn [y]
+          (get-pixel scene x y))
+        (range (get-in scene [:camera :height]))))
     (range (get-in scene [:camera :width]))))
 
 

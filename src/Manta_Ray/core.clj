@@ -6,14 +6,6 @@
            (javax.imageio ImageIO)
            (java.io File IOException)))
 
-(defn dprint
-  ([o]
-    (println (str "Debug output: " o ".\n"))
-    o)
-  ([s o]
-    (println (str s ": " o ".\n"))
-    o))
-
 (defn triple-to-int
   [vec]
   (apply
